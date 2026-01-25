@@ -1,0 +1,1150 @@
+import pygame
+import sys
+import os
+import time
+import random
+import math
+from typing import List, Tuple, Optional, Dict, Any
+
+
+class ResourcePath:
+    @staticmethod
+    def get(name: str) -> str:
+        if hasattr(sys, "_MEIPASS"):
+            return os.path.join(sys._MEIPASS, "assets", name)
+        return os.path.join("assets", name)
+
+
+class ImageLoader:
+    @staticmethod
+    def load(name: str, scale: float = None, size: Tuple[int, int] = None) -> pygame.Surface:
+        try:
+            path = ResourcePath.get(name)
+            if not os.path.exists(path):
+                print(f"Файл не найден: {path}")
+                if size:
+                    surf = pygame.Surface(size, pygame.SRCALPHA)
+                    surf.fill((255, 0, 255, 128))
+                    return surf
+                return pygame.Surface((100, 100), pygame.SRCALPHA)
+
+            img = pygame.image.load(path).convert_alpha()
+
+            if scale:
+                w, h = img.get_size()
+                img = pygame.transform.scale(img, (int(w * scale), int(h * scale)))
+            if size:
+                img = pygame.transform.scale(img, size)
+
+            return img
+        except Exception as e:
+            print(f"Ошибка загрузки изображения {name}: {e}")
+            if size:
+                surf = pygame.Surface(size, pygame.SRCALPHA)
+                surf.fill((255, 0, 255, 128))
+                return surf
+            return pygame.Surface((100, 100), pygame.SRCALPHA)
+
+    @staticmethod
+    def load_planet(name: str, scale: float) -> pygame.Surface:
+        return ImageLoader.load(name, scale=scale)
+
+    @staticmethod
+    def load_icon(name: str) -> pygame.Surface:
+        return ImageLoader.load(name, size=(34, 34))
+
+
+class Inventory:
+    def __init__(self):
+        self._frag_count = 0
+        self._iron_count = 0
+        self._crystal_count = 0
+        self._jade_count = 0
+        self._amber = 0
+        self._lava = 0
+        self._emerald = 0
+        self._money = 0
+        self._infernal = 0
+        self._infernal_blue = 0
+        self._infernal_pink = 0
+
+    @property
+    def frag_count(self) -> int:
+        return self._frag_count
+
+    @frag_count.setter
+    def frag_count(self, value: int):
+        self._frag_count = max(0, value)
+
+    @property
+    def iron_count(self) -> int:
+        return self._iron_count
+
+    @iron_count.setter
+    def iron_count(self, value: int):
+        self._iron_count = max(0, value)
+
+    @property
+    def crystal_count(self) -> int:
+        return self._crystal_count
+
+    @crystal_count.setter
+    def crystal_count(self, value: int):
+        self._crystal_count = max(0, value)
+
+    @property
+    def jade_count(self) -> int:
+        return self._jade_count
+
+    @jade_count.setter
+    def jade_count(self, value: int):
+        self._jade_count = max(0, value)
+
+    @property
+    def amber(self) -> int:
+        return self._amber
+
+    @amber.setter
+    def amber(self, value: int):
+        self._amber = max(0, value)
+
+    @property
+    def lava(self) -> int:
+        return self._lava
+
+    @lava.setter
+    def lava(self, value: int):
+        self._lava = max(0, value)
+
+    @property
+    def emerald(self) -> int:
+        return self._emerald
+
+    @emerald.setter
+    def emerald(self, value: int):
+        self._emerald = max(0, value)
+
+    @property
+    def money(self) -> int:
+        return self._money
+
+    @money.setter
+    def money(self, value: int):
+        self._money = max(0, value)
+
+    @property
+    def infernal(self) -> int:
+        return self._infernal
+
+    @infernal.setter
+    def infernal(self, value: int):
+        self._infernal = max(0, value)
+
+    @property
+    def infernal_blue(self) -> int:
+        return self._infernal_blue
+
+    @infernal_blue.setter
+    def infernal_blue(self, value: int):
+        self._infernal_blue = max(0, value)
+
+    @property
+    def infernal_pink(self) -> int:
+        return self._infernal_pink
+
+    @infernal_pink.setter
+    def infernal_pink(self, value: int):
+        self._infernal_pink = max(0, value)
+
+
+class DropImages:
+    def __init__(self):
+        self._fragment_img = ImageLoader.load("asteroid_fragment.png", size=(18, 18))
+        self._iron_img = ImageLoader.load("asteroid_iron.png", size=(18, 18))
+        self._crystal_img = ImageLoader.load("asteroid_crystal.png", size=(18, 18))
+        self._jade_img = ImageLoader.load("asteroid_jade.png", size=(18, 18))
+        self._account_strip_img = ImageLoader.load("account_strip.png", size=(360, 70))
+        self._amber_img = ImageLoader.load("Island_of_the_Lost_amber.png", size=(18, 18))
+        self._lava_img = ImageLoader.load("Island_of_the_Lost_lava.png", size=(18, 18))
+        self._emerald_img = ImageLoader.load("Island_of_the_Lost_emeralds.png", size=(18, 18))
+        self._coin_img = ImageLoader.load("coin.png", size=(20, 20))
+        self._infernal_img = ImageLoader.load("infernal_crystal.png", size=(25, 25))
+        self._infernal_blue_img = ImageLoader.load("infernal_crystal_blue.png", size=(25, 25))
+        self._infernal_pink_img = ImageLoader.load("infernal_crystal_pink.png", size=(25, 25))
+
+    @property
+    def fragment_img(self) -> pygame.Surface:
+        return self._fragment_img
+
+    @property
+    def iron_img(self) -> pygame.Surface:
+        return self._iron_img
+
+    @property
+    def crystal_img(self) -> pygame.Surface:
+        return self._crystal_img
+
+    @property
+    def jade_img(self) -> pygame.Surface:
+        return self._jade_img
+
+    @property
+    def account_strip_img(self) -> pygame.Surface:
+        return self._account_strip_img
+
+    @property
+    def amber_img(self) -> pygame.Surface:
+        return self._amber_img
+
+    @property
+    def lava_img(self) -> pygame.Surface:
+        return self._lava_img
+
+    @property
+    def emerald_img(self) -> pygame.Surface:
+        return self._emerald_img
+
+    @property
+    def coin_img(self) -> pygame.Surface:
+        return self._coin_img
+
+    @property
+    def infernal_img(self) -> pygame.Surface:
+        return self._infernal_img
+
+    @property
+    def infernal_blue_img(self) -> pygame.Surface:
+        return self._infernal_blue_img
+
+    @property
+    def infernal_pink_img(self) -> pygame.Surface:
+        return self._infernal_pink_img
+
+
+class GameObject:
+    def __init__(self, x: float, y: float, width: int, height: int):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+
+    def get_rect(self) -> pygame.Rect:
+        return pygame.Rect(self.x, self.y, self.width, self.height)
+
+    def update(self):
+        pass
+
+    def draw(self, surface: pygame.Surface):
+        pass
+
+
+class Bullet(GameObject):
+    def __init__(self, x: float, y: float):
+        super().__init__(x, y, 4, 12)
+        self.speed = 8
+
+    def update(self):
+        self.y -= self.speed
+
+    def draw(self, surface: pygame.Surface):
+        pygame.draw.rect(surface, (255, 255, 255), (self.x - 2, self.y, 4, 12))
+
+    def is_off_screen(self, screen_height: int) -> bool:
+        return self.y < 0
+
+
+class Player(GameObject):
+    def __init__(self, x: float, y: float, image: pygame.Surface):
+        self.image = image
+        super().__init__(x, y, image.get_width(), image.get_height())
+        self.speed = 5
+        self.hit_width = 80
+        self.hit_height = 100
+
+    def move(self, keys, screen_width, screen_height):
+        if keys[pygame.K_LEFT]:
+            self.x -= self.speed
+        if keys[pygame.K_RIGHT]:
+            self.x += self.speed
+        if keys[pygame.K_UP]:
+            self.y -= self.speed
+        if keys[pygame.K_DOWN]:
+            self.y += self.speed
+
+        hit = self.get_hit_rect()
+
+        if hit.left < 0:
+            self.x += -hit.left
+        if hit.right > screen_width:
+            self.x -= hit.right - screen_width
+        if hit.top < 0:
+            self.y += -hit.top
+        if hit.bottom > screen_height:
+            self.y -= hit.bottom - screen_height
+
+    def get_hit_rect(self) -> pygame.Rect:
+        hit_x = self.x + (self.width - self.hit_width) // 2
+        hit_y = self.y + (self.height - self.hit_height) // 2
+        return pygame.Rect(hit_x, hit_y, self.hit_width, self.hit_height)
+
+    def draw(self, surface: pygame.Surface):
+        surface.blit(self.image, (self.x, self.y))
+
+
+class Enemy(GameObject):
+    def __init__(self, x: float, y: float, image: pygame.Surface, speed: float = 2):
+        self.image = image
+        self.original_image = image
+        self.speed = speed
+        self.rotation = 0
+        self.rotation_speed = 0.5
+        super().__init__(x, y, 70, 70)
+
+    def update(self):
+        self.y += self.speed
+        self.rotation += self.rotation_speed
+
+    def draw(self, surface: pygame.Surface):
+        rotated = pygame.transform.rotate(self.original_image, self.rotation)
+        rect = rotated.get_rect(center=(self.x + 35, self.y + 35))
+        surface.blit(rotated, rect.topleft)
+
+
+class Meteorite(Enemy):
+    def __init__(self, x: float, y: float, image: pygame.Surface):
+        super().__init__(x, y, image, speed=2.5)
+        self.width = 120
+        self.height = 120
+        self.rotation_speed = 0.2
+
+    def draw(self, surface: pygame.Surface):
+        rotated = pygame.transform.rotate(self.original_image, self.rotation)
+        rect = rotated.get_rect(center=(self.x + 60, self.y + 60))
+        surface.blit(rotated, rect.topleft)
+
+
+class Drop(GameObject):
+    def __init__(self, x: float, y: float, drop_type: str, image: pygame.Surface):
+        self.drop_type = drop_type
+        self.image = image
+        super().__init__(x, y, image.get_width(), image.get_height())
+        self.speed = 2
+
+    def update(self):
+        self.y += self.speed
+
+    def draw(self, surface: pygame.Surface):
+        surface.blit(self.image, (self.x, self.y))
+
+
+class Comet(GameObject):
+    def __init__(self, x: float, y: float, image: pygame.Surface):
+        self.image = image
+        super().__init__(x, y, image.get_width(), image.get_height())
+        self.speed = 6
+        self.hit_width = 80
+        self.hit_height = 120
+        self.active = True
+
+    def update(self, screen_height: int):
+        self.y += self.speed
+        if self.y > screen_height:
+            self.active = False
+
+    def get_hit_rect(self) -> pygame.Rect:
+        hit_x = self.x + (self.width - self.hit_width) // 2
+        hit_y = self.y + (self.height - self.hit_height) // 2
+        return pygame.Rect(hit_x, hit_y, self.hit_width, self.hit_height)
+
+    def draw(self, surface: pygame.Surface):
+        if self.active:
+            surface.blit(self.image, (self.x, self.y))
+
+
+class Boss(GameObject):
+    def __init__(self, x: float, y: float, image: pygame.Surface):
+        self.original_image = image
+        self.image = image
+        super().__init__(x, y, 120, 120)
+        self.hp = 200
+        self.max_hp = 200
+        self.alive = True
+        self.timer = 0
+        self.move_timer = 0
+
+    def update(self):
+        if self.alive:
+            self.timer += 0.05
+            self.move_timer += 0.04
+            self.x += math.sin(self.move_timer) * 2
+
+            scale = 1 + 0.1 * math.sin(self.timer)
+            self.image = pygame.transform.scale(
+                self.original_image,
+                (int(120 * scale), int(120 * scale))
+            )
+
+    def take_damage(self, damage: int):
+        self.hp -= damage
+        if self.hp <= 0:
+            self.alive = False
+
+    def draw(self, surface: pygame.Surface):
+        if self.alive:
+            bx = self.x - (self.image.get_width() - 120) // 2
+            by = self.y - (self.image.get_height() - 120) // 2
+            surface.blit(self.image, (bx, by))
+
+            pygame.draw.rect(surface, (255, 0, 0), (self.x, self.y + 130, 120, 8))
+            pygame.draw.rect(surface, (0, 255, 0),
+                             (self.x, self.y + 130, 120 * (self.hp / self.max_hp), 8))
+
+
+class Henchman(GameObject):
+    def __init__(self, x: float, y: float, image: pygame.Surface):
+        self.image = image
+        super().__init__(x, y, 50, 50)
+        self.speed = 1.5
+
+    def update(self):
+        self.y += self.speed
+        self.x += random.randint(-2, 2)
+
+    def draw(self, surface: pygame.Surface):
+        surface.blit(self.image, (self.x, self.y))
+
+
+class GameScreen:
+    def __init__(self, width: int, height: int):
+        self.width = width
+        self.height = height
+        self.clock = pygame.time.Clock()
+        self.font = pygame.font.SysFont(None, 22)
+        self.running = False
+
+    def handle_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return False
+        return True
+
+    def update(self):
+        pass
+
+    def draw(self, surface: pygame.Surface):
+        pass
+
+    def run(self, surface: pygame.Surface):
+        self.running = True
+        while self.running:
+            if not self.handle_events():
+                break
+            self.update()
+            self.draw(surface)
+            pygame.display.update()
+            self.clock.tick(60)
+
+
+class DefeatScreen:
+    @staticmethod
+    def show(surface: pygame.Surface, width: int, height: int, font: pygame.font.Font):
+        surface.fill((0, 0, 0))
+        txt = font.render("Defeat!", True, (255, 0, 0))
+        surface.blit(txt, (width // 2 - txt.get_width() // 2,
+                           height // 2 - txt.get_height() // 2))
+        pygame.display.update()
+        pygame.time.delay(2000)
+
+
+class SpaceShooterGame(GameScreen):
+    def __init__(self, width: int, height: int, inventory: Inventory, drop_images: DropImages):
+        super().__init__(width, height)
+        self.inventory = inventory
+        self.drop_images = drop_images
+
+        self.background = ImageLoader.load("space_1.jpg", size=(width, height))
+        self.ship_img = ImageLoader.load("ship.png", size=(180, 160))
+        self.asteroid_img = ImageLoader.load("asteroid.png", size=(400, 400))
+        self.meteorite_img = ImageLoader.load("meteorite_enemy.png", size=(80, 80))
+        self.comet_img = ImageLoader.load("comet.png", size=(160, 220))
+
+        self.player = Player(width // 2 - 90, height - 160, self.ship_img)
+        self.bullets: List[Bullet] = []
+        self.enemies: List[Enemy] = []
+        self.meteorites: List[Meteorite] = []
+        self.drops: List[Drop] = []
+        self.comet: Optional[Comet] = None
+
+        self.shoot_cooldown = 0
+        self.spawn_timer = 0
+        self.meteorite_timer = 0
+
+        self.bg_y1 = 0
+        self.bg_y2 = -height
+        self.bg_speed = 1
+
+    def handle_events(self):
+        if not super().handle_events():
+            return False
+
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_ESCAPE]:
+            self.running = False
+
+        return True
+
+    def update(self):
+        self.bg_y1 += self.bg_speed
+        self.bg_y2 += self.bg_speed
+        if self.bg_y1 >= self.height:
+            self.bg_y1 = -self.height
+        if self.bg_y2 >= self.height:
+            self.bg_y2 = -self.height
+
+        keys = pygame.key.get_pressed()
+        self.player.move(keys, self.width, self.height)
+
+        self.shoot_cooldown += 1
+        if keys[pygame.K_SPACE] and self.shoot_cooldown > 10:
+            self.bullets.append(Bullet(self.player.x + 90, self.player.y))
+            self.shoot_cooldown = 0
+
+        for bullet in self.bullets[:]:
+            bullet.update()
+            if bullet.is_off_screen(self.height):
+                self.bullets.remove(bullet)
+
+        self.spawn_timer += 1
+        if self.spawn_timer > 60:
+            self.spawn_timer = 0
+            self.enemies.append(Enemy(
+                random.randint(0, self.width - 70),
+                -80,
+                self.asteroid_img
+            ))
+
+        self.meteorite_timer += 1
+        if self.meteorite_timer > 60:
+            self.meteorite_timer = 0
+            self.meteorites.append(Meteorite(
+                random.randint(0, self.width - 120),
+                -120,
+                self.meteorite_img
+            ))
+
+        for enemy in self.enemies:
+            enemy.update()
+        for meteorite in self.meteorites:
+            meteorite.update()
+
+        for enemy in self.enemies[:]:
+            hit = False
+            for bullet in self.bullets[:]:
+                if (enemy.x < bullet.x < enemy.x + 70 and
+                        enemy.y < bullet.y < enemy.y + 70):
+                    self.bullets.remove(bullet)
+                    hit = True
+                    break
+
+            if hit:
+                self.enemies.remove(enemy)
+                self.spawn_drop(enemy.x + 30, enemy.y + 30)
+
+        for meteorite in self.meteorites[:]:
+            hit = False
+            for bullet in self.bullets[:]:
+                if (meteorite.x < bullet.x < meteorite.x + 120 and
+                        meteorite.y < bullet.y < meteorite.y + 120):
+                    self.bullets.remove(bullet)
+                    hit = True
+                    break
+
+            if hit:
+                self.meteorites.remove(meteorite)
+
+        player_hit_rect = self.player.get_hit_rect()
+
+        for enemy in self.enemies:
+            if player_hit_rect.colliderect(enemy.get_rect()):
+                DefeatScreen.show(pygame.display.get_surface(), self.width, self.height, self.font)
+                self.running = False
+                return
+
+        for meteorite in self.meteorites:
+            if player_hit_rect.colliderect(meteorite.get_rect()):
+                self.bg_y1 += self.bg_speed
+                self.bg_y2 += self.bg_speed
+
+                self.running = False
+                return
+
+        if self.comet is None and random.randint(0, 300) == 0:
+            self.comet = Comet(
+                random.randint(0, self.width - 160),
+                -220,
+                self.comet_img
+            )
+
+        if self.comet is not None:
+            self.comet.update(self.height)
+            if not self.comet.active:
+                self.comet = None
+            elif player_hit_rect.colliderect(self.comet.get_hit_rect()):
+                DefeatScreen.show(pygame.display.get_surface(), self.width, self.height, self.font)
+                self.running = False
+                return
+
+        for drop in self.drops[:]:
+            drop.update()
+            if player_hit_rect.colliderect(drop.get_rect()):
+                self.collect_drop(drop.drop_type)
+                self.drops.remove(drop)
+            elif drop.y > self.height:
+                self.drops.remove(drop)
+
+    def spawn_drop(self, x: float, y: float):
+        r = random.randint(1, 100)
+        if r <= 70:
+            self.drops.append(Drop(x, y, "fragment", self.drop_images.fragment_img))
+        elif r <= 90:
+            self.drops.append(Drop(x, y, "iron", self.drop_images.iron_img))
+        elif r <= 98:
+            self.drops.append(Drop(x, y, "crystal", self.drop_images.crystal_img))
+        else:
+            self.drops.append(Drop(x, y, "jade", self.drop_images.jade_img))
+
+    def collect_drop(self, drop_type: str):
+        if drop_type == "fragment":
+            self.inventory.frag_count += 1
+        elif drop_type == "iron":
+            self.inventory.iron_count += 1
+        elif drop_type == "crystal":
+            self.inventory.crystal_count += 1
+        elif drop_type == "jade":
+            self.inventory.jade_count += 1
+
+    def draw(self, surface: pygame.Surface):
+        surface.blit(self.background, (0, self.bg_y1))
+        surface.blit(self.background, (0, self.bg_y2))
+
+        self.player.draw(surface)
+
+        for bullet in self.bullets:
+            bullet.draw(surface)
+
+        for enemy in self.enemies:
+            enemy.draw(surface)
+
+        for meteorite in self.meteorites:
+            meteorite.draw(surface)
+
+        for drop in self.drops:
+            drop.draw(surface)
+
+        if self.comet is not None:
+            self.comet.draw(surface)
+
+        self.draw_resource_panel(surface)
+
+    def draw_resource_panel(self, surface: pygame.Surface):
+        strip_x = (self.width - self.drop_images.account_strip_img.get_width()) // 2
+        surface.blit(self.drop_images.account_strip_img, (strip_x, 10))
+
+        icons = [
+            (self.drop_images.fragment_img, self.inventory.frag_count),
+            (self.drop_images.iron_img, self.inventory.iron_count),
+            (self.drop_images.crystal_img, self.inventory.crystal_count),
+            (self.drop_images.jade_img, self.inventory.jade_count)
+        ]
+
+        step = (self.drop_images.account_strip_img.get_width() - 40) // 4
+        for i in range(4):
+            x = strip_x + 20 + step * i
+            surface.blit(icons[i][0], (x, 35))
+            txt = self.font.render(str(icons[i][1]), True, (0, 0, 0))
+            surface.blit(txt, (x + 22, 35))
+
+
+class LostIslandGame(GameScreen):
+    def __init__(self, width: int, height: int, inventory: Inventory, drop_images: DropImages):
+        super().__init__(width, height)
+        self.inventory = inventory
+        self.drop_images = drop_images
+
+        self.background = ImageLoader.load("Island_of_the_Lost_fon.png", size=(width, height))
+        self.ship_img = ImageLoader.load("ship.png", size=(180, 160))
+        self.boss_img = ImageLoader.load("boss_eye.png", size=(120, 120))
+        self.hench_img = ImageLoader.load("henchmen_glaz.png", size=(50, 50))
+
+        self.player = Player(width // 2 - 90, height - 160, self.ship_img)
+        self.boss = Boss(width // 2 - 60, 40, self.boss_img)
+        self.bullets: List[Bullet] = []
+        self.henchmen: List[Henchman] = []
+        self.drops: List[Drop] = []
+        self.coins: List[Drop] = []
+
+        self.shoot_cooldown = 0
+        self.hench_timer = 0
+
+        self.coins_spawned = False
+
+    def handle_events(self):
+        if not super().handle_events():
+            return False
+
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_ESCAPE]:
+            self.running = False
+
+        return True
+
+    def update(self):
+        keys = pygame.key.get_pressed()
+        self.player.move(keys, self.width, self.height)
+
+        self.shoot_cooldown += 1
+        if keys[pygame.K_SPACE] and self.shoot_cooldown > 10:
+            self.bullets.append(Bullet(self.player.x + 90, self.player.y))
+            self.shoot_cooldown = 0
+
+        for bullet in self.bullets[:]:
+            bullet.update()
+            if bullet.is_off_screen(self.height):
+                self.bullets.remove(bullet)
+
+        if self.boss.alive:
+            self.boss.update()
+
+            self.hench_timer += 1
+            if self.hench_timer > 40:
+                self.hench_timer = 0
+                for _ in range(2):
+                    self.henchmen.append(Henchman(
+                        random.randint(0, self.width - 50),
+                        self.boss.y + 120,
+                        self.hench_img
+                    ))
+
+        player_hit_rect = self.player.get_hit_rect()
+
+        for henchman in self.henchmen[:]:
+            henchman.update()
+
+            if player_hit_rect.colliderect(henchman.get_rect()):
+                DefeatScreen.show(pygame.display.get_surface(), self.width, self.height, self.font)
+                self.running = False
+                return
+
+            hit = False
+            for bullet in self.bullets[:]:
+                if henchman.get_rect().collidepoint(bullet.x, bullet.y):
+                    self.bullets.remove(bullet)
+                    hit = True
+                    break
+
+            if hit:
+                self.henchmen.remove(henchman)
+                if random.randint(1, 100) <= 30:
+                    r = random.randint(1, 3)
+                    if r == 1:
+                        self.drops.append(Drop(henchman.x, henchman.y, "amber", self.drop_images.amber_img))
+                    elif r == 2:
+                        self.drops.append(Drop(henchman.x, henchman.y, "lava", self.drop_images.lava_img))
+                    else:
+                        self.drops.append(Drop(henchman.x, henchman.y, "emerald", self.drop_images.emerald_img))
+            elif henchman.y > self.height:
+                self.henchmen.remove(henchman)
+
+        if self.boss.alive:
+            for bullet in self.bullets[:]:
+                if self.boss.get_rect().collidepoint(bullet.x, bullet.y):
+                    self.boss.take_damage(1)
+                    self.bullets.remove(bullet)
+
+                    if not self.boss.alive and not self.coins_spawned:
+                        self.coins_spawned = True
+                        for _ in range(10):
+                            self.coins.append(Drop(
+                                self.boss.x + 60 + random.randint(-30, 30),
+                                self.boss.y + 60 + random.randint(-30, 30),
+                                "coin",
+                                self.drop_images.coin_img
+                            ))
+
+        for drop in self.drops[:]:
+            drop.update()
+            if player_hit_rect.colliderect(drop.get_rect()):
+                self.collect_drop(drop.drop_type)
+                self.drops.remove(drop)
+            elif drop.y > self.height:
+                self.drops.remove(drop)
+
+        for coin in self.coins[:]:
+            coin.update()
+            if player_hit_rect.colliderect(coin.get_rect()):
+                self.inventory.money += 1
+                self.coins.remove(coin)
+            elif coin.y > self.height:
+                self.coins.remove(coin)
+
+    def collect_drop(self, drop_type: str):
+        if drop_type == "amber":
+            self.inventory.amber += 1
+        elif drop_type == "lava":
+            self.inventory.lava += 1
+        elif drop_type == "emerald":
+            self.inventory.emerald += 1
+
+    def draw(self, surface: pygame.Surface):
+        surface.blit(self.background, (0, 0))
+
+        self.player.draw(surface)
+
+        for bullet in self.bullets:
+            bullet.draw(surface)
+
+        self.boss.draw(surface)
+
+        for henchman in self.henchmen:
+            henchman.draw(surface)
+
+        for drop in self.drops:
+            drop.draw(surface)
+
+        for coin in self.coins:
+            coin.draw(surface)
+
+        self.draw_resource_panel(surface)
+
+    def draw_resource_panel(self, surface: pygame.Surface):
+        strip_x = (self.width - self.drop_images.account_strip_img.get_width()) // 2
+        surface.blit(self.drop_images.account_strip_img, (strip_x, 10))
+
+        icons = [
+            (self.drop_images.amber_img, self.inventory.amber),
+            (self.drop_images.lava_img, self.inventory.lava),
+            (self.drop_images.emerald_img, self.inventory.emerald),
+            (self.drop_images.coin_img, self.inventory.money)
+        ]
+
+        step = (self.drop_images.account_strip_img.get_width() - 40) // 4
+        for i in range(4):
+            x = strip_x + 20 + step * i
+            surface.blit(icons[i][0], (x, 35))
+            txt = self.font.render(str(icons[i][1]), True, (0, 0, 0))
+            surface.blit(txt, (x + 22, 35))
+
+
+class Menu(GameScreen):
+    def __init__(self, width: int, height: int):
+        super().__init__(width, height)
+
+        self.background = ImageLoader.load("menu_background.png", size=(width, height))
+        self.time_strip = ImageLoader.load("time_string.png", size=(160, 40))
+        self.menu_strip = ImageLoader.load("stripe_menu.png", size=(width, 70))
+
+        self.planets = [
+            {
+                "img": ImageLoader.load_planet("Wasteland_Land.png", 0.58),
+                "pos": (90, 190),
+                "action": None
+            },
+            {
+                "img": ImageLoader.load_planet("land_of_hell.png", 0.48),
+                "pos": (290, 150),
+                "action": "hell"
+            },
+            {
+                "img": ImageLoader.load_planet("Island_of_the_Lost.png", 0.50),
+                "pos": (85, height - 170),
+                "action": "lost_island"
+            },
+            {
+                "img": ImageLoader.load_planet("Earth.png", 0.56),
+                "pos": (width - 85, height - 250),
+                "action": "game"
+            },
+        ]
+
+        self.icons = [
+            ImageLoader.load_icon("shop.png"),
+            ImageLoader.load_icon("storage.png"),
+            ImageLoader.load_icon("records.png")
+        ]
+        self.icon_y = height - 35
+        self.icon_x = [60, width // 2, width - 60]
+
+        self.start_time = time.time()
+        self.total_time = 0
+
+        self.inventory = Inventory()
+        self.drop_images = DropImages()
+
+    def handle_events(self):
+        if not super().handle_events():
+            return False
+
+        mx, my = pygame.mouse.get_pos()
+        click = pygame.mouse.get_pressed()
+
+        for planet in self.planets:
+            if planet["action"] is None:
+                continue
+
+            img = planet["img"]
+            x, y = planet["pos"]
+            rect = img.get_rect(center=(x, y))
+
+            if rect.collidepoint(mx, my) and click[0]:
+                if planet["action"] == "game":
+                    game = SpaceShooterGame(self.width, self.height, self.inventory, self.drop_images)
+                    game.run(pygame.display.get_surface())
+                    pygame.display.set_caption("Space Menu")
+                    self.start_time = time.time()
+                elif planet["action"] == "lost_island":
+                    game = LostIslandGame(self.width, self.height, self.inventory, self.drop_images)
+                    game.run(pygame.display.get_surface())
+                    pygame.display.set_caption("Space Menu")
+                    self.start_time = time.time()
+                elif planet["action"] == "hell":
+                    game = LandOfHellGame(self.width, self.height, self.inventory, self.drop_images)
+                    game.run(pygame.display.get_surface())
+                    pygame.display.set_caption("Space Menu")
+                    self.start_time = time.time()
+
+        return True
+
+    def draw(self, surface: pygame.Surface):
+        surface.blit(self.background, (0, 0))
+
+        t = int(self.total_time + (time.time() - self.start_time))
+        surface.blit(self.time_strip, (10, 10))
+        time_text = f"{t // 60:02}:{t % 60:02}"
+        surface.blit(self.font.render(time_text, True, (0, 0, 0)), (42, 22))
+
+        mx, my = pygame.mouse.get_pos()
+        for planet in self.planets:
+            img = planet["img"]
+            x, y = planet["pos"]
+            rect = img.get_rect(center=(x, y))
+
+            if rect.collidepoint(mx, my):
+                big = pygame.transform.scale(img, (int(rect.w * 1.08), int(rect.h * 1.08)))
+                surface.blit(big, big.get_rect(center=(x, y)))
+            else:
+                surface.blit(img, rect)
+
+        surface.blit(self.menu_strip, (0, self.height - 70))
+        for i in range(3):
+            rect = self.icons[i].get_rect(center=(self.icon_x[i], self.icon_y))
+            surface.blit(self.icons[i], rect)
+
+
+class LandOfHellGame(GameScreen):
+    def __init__(self, width, height, inventory, drop_images):
+        super().__init__(width, height)
+        self.inventory = inventory
+        self.drop_images = drop_images
+        self.mouth_timer = 0
+        self.mouth_open = True
+
+        self.background = ImageLoader.load("fon_land of hell.jpg", size=(width, height))
+        self.ship_img = ImageLoader.load("ship.png", size=(180, 160))
+        self.chaser_open = ImageLoader.load("lava_monster_open.png", size=(200, 200))
+        self.chaser_close = ImageLoader.load("lava_monster_clouse.png", size=(200, 200))
+        self.chaser_img = self.chaser_open
+
+        self.obstacle_img = ImageLoader.load("lava_monster_litle.png", size=(60, 60))
+
+        self.player = Player(width // 2 - 90, height // 2, self.ship_img)
+
+        self.chaser_y = height - 100
+
+        self.bg_y1 = 0
+        self.bg_y2 = -height
+        self.bg_speed = 1.2
+
+        self.obstacles = []
+        self.drops = []
+
+        self.spawn_timer = 0
+        self.resource_timer = 0
+        self.pull_timer = 0
+
+    def handle_events(self):
+        if not super().handle_events():
+            return False
+
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_ESCAPE]:
+            self.running = False
+
+        return True
+
+    def update(self):
+        self.bg_y1 += self.bg_speed
+        self.bg_y2 += self.bg_speed
+        if self.bg_y1 >= self.height:
+            self.bg_y1 = -self.height
+        if self.bg_y2 >= self.height:
+            self.bg_y2 = -self.height
+
+        keys = pygame.key.get_pressed()
+
+        self.pull_timer += 1
+        if not keys[pygame.K_UP] and self.pull_timer > 20:
+            self.pull_timer = 0
+            if self.player.y < self.height - 100:
+                self.player.y += 0.5
+
+        self.player.move(keys, self.width, self.height)
+
+        self.spawn_timer += 1
+        self.resource_timer += 1
+
+        if self.spawn_timer > 80:
+            self.spawn_timer = 0
+
+            self.obstacles.append(
+                GameObject(
+                    random.randint(0, self.width - 60),
+                    -60,
+                    60,
+                    60
+                )
+            )
+
+        if self.resource_timer > 60:
+            self.resource_timer = 0
+
+            if random.randint(1, 100) <= 50:
+                r = random.randint(1, 3)
+                if r == 1:
+                    self.drops.append(Drop(
+                        random.randint(50, self.width - 50),
+                        -40,
+                        "infernal",
+                        self.drop_images.infernal_img
+                    ))
+                elif r == 2:
+                    self.drops.append(Drop(
+                        random.randint(50, self.width - 50),
+                        -40,
+                        "infernal_blue",
+                        self.drop_images.infernal_blue_img
+                    ))
+                else:
+                    self.drops.append(Drop(
+                        random.randint(50, self.width - 50),
+                        -40,
+                        "infernal_pink",
+                        self.drop_images.infernal_pink_img
+                    ))
+
+        hit = self.player.get_hit_rect()
+
+        for obs in self.obstacles[:]:
+            obs.y += 2.5
+            obs_rect = pygame.Rect(
+                obs.x + 10,
+                obs.y + 10,
+                obs.width - 20,
+                obs.height - 20
+            )
+
+            if hit.colliderect(obs_rect):
+                DefeatScreen.show(pygame.display.get_surface(), self.width, self.height, self.font)
+                self.running = False
+                return
+
+                DefeatScreen.show(pygame.display.get_surface(), self.width, self.height, self.font)
+                self.running = False
+                return
+            if obs.y > self.height:
+                self.obstacles.remove(obs)
+
+        self.mouth_timer += 1
+        if self.mouth_timer > 20:
+            self.mouth_timer = 0
+            self.mouth_open = not self.mouth_open
+
+            if self.mouth_open:
+                self.chaser_img = self.chaser_open
+            else:
+                self.chaser_img = self.chaser_close
+
+        for drop in self.drops[:]:
+            drop.update()
+            if hit.colliderect(drop.get_rect()):
+                if drop.drop_type == "infernal":
+                    self.inventory.infernal += 1
+                elif drop.drop_type == "infernal_blue":
+                    self.inventory.infernal_blue += 1
+                else:
+                    self.inventory.infernal_pink += 1
+                self.drops.remove(drop)
+            elif drop.y > self.height:
+                self.drops.remove(drop)
+
+        chaser_rect = pygame.Rect(
+            self.width // 2 - 100,
+            self.chaser_y,
+            200,
+            200
+        )
+
+        if hit.colliderect(chaser_rect):
+            DefeatScreen.show(pygame.display.get_surface(), self.width, self.height, self.font)
+            self.running = False
+            return
+
+    def draw(self, surface):
+        surface.blit(self.background, (0, self.bg_y1))
+        surface.blit(self.background, (0, self.bg_y2))
+
+        surface.blit(self.chaser_img, (self.width // 2 - 100, self.chaser_y))
+
+        self.player.draw(surface)
+
+        for obs in self.obstacles:
+            surface.blit(self.obstacle_img, (obs.x, obs.y))
+
+        for drop in self.drops:
+            drop.draw(surface)
+
+        self.draw_resource_panel(surface)
+
+    def draw_resource_panel(self, surface):
+        strip_x = (self.width - self.drop_images.account_strip_img.get_width()) // 2
+        surface.blit(self.drop_images.account_strip_img, (strip_x, 10))
+
+        icons = [
+            (self.drop_images.infernal_img, self.inventory.infernal),
+            (self.drop_images.infernal_blue_img, self.inventory.infernal_blue),
+            (self.drop_images.infernal_pink_img, self.inventory.infernal_pink),
+        ]
+
+        step = (self.drop_images.account_strip_img.get_width() - 40) // 3
+        for i in range(3):
+            x = strip_x + 20 + step * i
+            surface.blit(icons[i][0], (x, 35))
+            txt = self.font.render(str(icons[i][1]), True, (0, 0, 0))
+            surface.blit(txt, (x + 22, 35))
+
+
+def main():
+    pygame.init()
+
+    WIDTH, HEIGHT = 400, 600
+    win = pygame.display.set_mode((WIDTH, HEIGHT))
+    pygame.display.set_caption("Space Menu")
+
+    menu = Menu(WIDTH, HEIGHT)
+    menu.run(win)
+
+    pygame.quit()
+    sys.exit()
+
+
+if __name__ == "__main__":
+    main()
