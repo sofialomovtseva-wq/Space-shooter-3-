@@ -4,7 +4,7 @@ import os
 import time
 import random
 import math
-from typing import List, Tuple, Optional, Dict, Any
+from typing import List, Tuple, Optional
 
 
 class ResourcePath:
@@ -346,10 +346,11 @@ class Comet(GameObject):
         self.hit_height = 120
         self.active = True
 
-    def update(self, screen_height: int):
+    def update(self):
         self.y += self.speed
-        if self.y > screen_height:
-            self.active = False
+
+    def is_off_screen(self, screen_height: int) -> bool:
+        return self.y > screen_height
 
     def get_hit_rect(self) -> pygame.Rect:
         hit_x = self.x + (self.width - self.hit_width) // 2
@@ -483,6 +484,12 @@ class SpaceShooterGame(GameScreen):
         self.bg_y2 = -height
         self.bg_speed = 1
 
+        self.difficulty_timer = 0
+        self.difficulty_level = 1.0
+        self.enemy_speed_multiplier = 1.0
+        self.meteorite_speed_multiplier = 1.0
+        self.spawn_rate_multiplier = 1.0
+
     def handle_events(self):
         if not super().handle_events():
             return False
@@ -494,8 +501,16 @@ class SpaceShooterGame(GameScreen):
         return True
 
     def update(self):
-        self.bg_y1 += self.bg_speed
-        self.bg_y2 += self.bg_speed
+        self.difficulty_timer += 1
+        if self.difficulty_timer % 1800 == 0:
+            self.difficulty_level += 0.05
+            self.enemy_speed_multiplier = 1.0 + (self.difficulty_level - 1.0) * 0.3
+            self.meteorite_speed_multiplier = 1.0 + (self.difficulty_level - 1.0) * 0.4
+            self.spawn_rate_multiplier = 1.0 + (self.difficulty_level - 1.0) * 0.2
+
+        bg_speed_current = self.bg_speed * (1.0 + (self.difficulty_level - 1.0) * 0.1)
+        self.bg_y1 += bg_speed_current
+        self.bg_y2 += bg_speed_current
         if self.bg_y1 >= self.height:
             self.bg_y1 = -self.height
         if self.bg_y2 >= self.height:
@@ -515,7 +530,8 @@ class SpaceShooterGame(GameScreen):
                 self.bullets.remove(bullet)
 
         self.spawn_timer += 1
-        if self.spawn_timer > 60:
+        spawn_threshold = 60 / self.spawn_rate_multiplier
+        if self.spawn_timer > spawn_threshold:
             self.spawn_timer = 0
             self.enemies.append(Enemy(
                 random.randint(0, self.width - 70),
@@ -524,7 +540,8 @@ class SpaceShooterGame(GameScreen):
             ))
 
         self.meteorite_timer += 1
-        if self.meteorite_timer > 60:
+        meteorite_threshold = 60 / (self.spawn_rate_multiplier * 0.8)
+        if self.meteorite_timer > meteorite_threshold:
             self.meteorite_timer = 0
             self.meteorites.append(Meteorite(
                 random.randint(0, self.width - 120),
@@ -533,8 +550,11 @@ class SpaceShooterGame(GameScreen):
             ))
 
         for enemy in self.enemies:
+            enemy.speed = 2 * self.enemy_speed_multiplier
             enemy.update()
+
         for meteorite in self.meteorites:
+            meteorite.speed = 2.5 * self.meteorite_speed_multiplier
             meteorite.update()
 
         for enemy in self.enemies[:]:
@@ -572,9 +592,7 @@ class SpaceShooterGame(GameScreen):
 
         for meteorite in self.meteorites:
             if player_hit_rect.colliderect(meteorite.get_rect()):
-                self.bg_y1 += self.bg_speed
-                self.bg_y2 += self.bg_speed
-
+                DefeatScreen.show(pygame.display.get_surface(), self.width, self.height, self.font)
                 self.running = False
                 return
 
@@ -586,8 +604,11 @@ class SpaceShooterGame(GameScreen):
             )
 
         if self.comet is not None:
-            self.comet.update(self.height)
-            if not self.comet.active:
+            comet_speed = 6 * (1.0 + (self.difficulty_level - 1.0) * 0.2)
+            self.comet.speed = comet_speed
+            self.comet.update()
+            if self.comet.is_off_screen(self.height):
+                self.comet.active = False
                 self.comet = None
             elif player_hit_rect.colliderect(self.comet.get_hit_rect()):
                 DefeatScreen.show(pygame.display.get_surface(), self.width, self.height, self.font)
@@ -595,6 +616,7 @@ class SpaceShooterGame(GameScreen):
                 return
 
         for drop in self.drops[:]:
+            drop.speed = 2 * (1.0 + (self.difficulty_level - 1.0) * 0.1)
             drop.update()
             if player_hit_rect.colliderect(drop.get_rect()):
                 self.collect_drop(drop.drop_type)
@@ -688,6 +710,11 @@ class LostIslandGame(GameScreen):
 
         self.coins_spawned = False
 
+        self.difficulty_timer = 0
+        self.difficulty_level = 1.0
+        self.henchman_speed_multiplier = 1.0
+        self.spawn_rate_multiplier = 1.0
+
     def handle_events(self):
         if not super().handle_events():
             return False
@@ -699,6 +726,12 @@ class LostIslandGame(GameScreen):
         return True
 
     def update(self):
+        self.difficulty_timer += 1
+        if self.difficulty_timer % 1800 == 0:
+            self.difficulty_level += 0.05
+            self.henchman_speed_multiplier = 1.0 + (self.difficulty_level - 1.0) * 0.3
+            self.spawn_rate_multiplier = 1.0 + (self.difficulty_level - 1.0) * 0.15
+
         keys = pygame.key.get_pressed()
         self.player.move(keys, self.width, self.height)
 
@@ -716,7 +749,8 @@ class LostIslandGame(GameScreen):
             self.boss.update()
 
             self.hench_timer += 1
-            if self.hench_timer > 40:
+            hench_threshold = 40 / self.spawn_rate_multiplier
+            if self.hench_timer > hench_threshold:
                 self.hench_timer = 0
                 for _ in range(2):
                     self.henchmen.append(Henchman(
@@ -728,6 +762,7 @@ class LostIslandGame(GameScreen):
         player_hit_rect = self.player.get_hit_rect()
 
         for henchman in self.henchmen[:]:
+            henchman.speed = 1.5 * self.henchman_speed_multiplier
             henchman.update()
 
             if player_hit_rect.colliderect(henchman.get_rect()):
@@ -772,6 +807,7 @@ class LostIslandGame(GameScreen):
                             ))
 
         for drop in self.drops[:]:
+            drop.speed = 2 * (1.0 + (self.difficulty_level - 1.0) * 0.1)
             drop.update()
             if player_hit_rect.colliderect(drop.get_rect()):
                 self.collect_drop(drop.drop_type)
@@ -780,6 +816,7 @@ class LostIslandGame(GameScreen):
                 self.drops.remove(drop)
 
         for coin in self.coins[:]:
+            coin.speed = 2 * (1.0 + (self.difficulty_level - 1.0) * 0.1)
             coin.update()
             if player_hit_rect.colliderect(coin.get_rect()):
                 self.inventory.money += 1
@@ -874,11 +911,9 @@ class Menu(GameScreen):
         self.icon_y = height - 35
         self.icon_x = [60, width // 2, width - 60]
 
-        self.start_time = time.time()
-        self.total_time = 0
-
         self.inventory = Inventory()
         self.drop_images = DropImages()
+        self.app_start_time = time.time()
 
     def handle_events(self):
         if not super().handle_events():
@@ -900,24 +935,22 @@ class Menu(GameScreen):
                     game = SpaceShooterGame(self.width, self.height, self.inventory, self.drop_images)
                     game.run(pygame.display.get_surface())
                     pygame.display.set_caption("Space Menu")
-                    self.start_time = time.time()
                 elif planet["action"] == "lost_island":
                     game = LostIslandGame(self.width, self.height, self.inventory, self.drop_images)
                     game.run(pygame.display.get_surface())
                     pygame.display.set_caption("Space Menu")
-                    self.start_time = time.time()
                 elif planet["action"] == "hell":
                     game = LandOfHellGame(self.width, self.height, self.inventory, self.drop_images)
                     game.run(pygame.display.get_surface())
                     pygame.display.set_caption("Space Menu")
-                    self.start_time = time.time()
 
         return True
 
     def draw(self, surface: pygame.Surface):
         surface.blit(self.background, (0, 0))
 
-        t = int(self.total_time + (time.time() - self.start_time))
+        t = int(time.time() - self.app_start_time)
+
         surface.blit(self.time_strip, (10, 10))
         time_text = f"{t // 60:02}:{t % 60:02}"
         surface.blit(self.font.render(time_text, True, (0, 0, 0)), (42, 22))
@@ -954,22 +987,57 @@ class LandOfHellGame(GameScreen):
         self.chaser_close = ImageLoader.load("lava_monster_clouse.png", size=(200, 200))
         self.chaser_img = self.chaser_open
 
-        self.obstacle_img = ImageLoader.load("lava_monster_litle.png", size=(60, 60))
+        self.obstacle_base_img = ImageLoader.load("lava_monster_litle.png", size=(60, 60))
+
+        self.obstacle_imgs = []
+        colors = [
+            (255, 100, 100),
+            (100, 255, 100),
+            (100, 100, 255)
+        ]
+        for color in colors:
+            colored = self.obstacle_base_img.copy()
+            colored.fill(color, special_flags=pygame.BLEND_RGB_MULT)
+            self.obstacle_imgs.append(colored)
 
         self.player = Player(width // 2 - 90, height // 2, self.ship_img)
-
         self.chaser_y = height - 100
+        self.chaser_height = 200
 
         self.bg_y1 = 0
         self.bg_y2 = -height
         self.bg_speed = 1.2
+
+        self.lava_particles = []
+        for _ in range(30):
+            self.lava_particles.append(self.create_lava_particle(width, height))
 
         self.obstacles = []
         self.drops = []
 
         self.spawn_timer = 0
         self.resource_timer = 0
-        self.pull_timer = 0
+
+        self.difficulty_timer = 0
+        self.difficulty_level = 1.0
+        self.obstacle_speed_multiplier = 1.0
+        self.spawn_rate_multiplier = 1.0
+
+    def create_lava_particle(self, width: int, height: int) -> dict:
+        return {
+            "x": random.randint(0, width),
+            "y": random.randint(-height, 0),
+            "size": random.randint(2, 6),
+            "speed": random.uniform(0.5, 2.0),
+            "color": (
+                random.randint(200, 255),
+                random.randint(50, 100),
+                random.randint(0, 50)
+            ),
+            "float_speed": random.uniform(0.1, 0.3),
+            "float_amplitude": random.uniform(0.5, 2.0),
+            "timer": random.uniform(0, math.pi * 2)
+        }
 
     def handle_events(self):
         if not super().handle_events():
@@ -982,8 +1050,22 @@ class LandOfHellGame(GameScreen):
         return True
 
     def update(self):
-        self.bg_y1 += self.bg_speed
-        self.bg_y2 += self.bg_speed
+        self.difficulty_timer += 1
+        if self.difficulty_timer % 1800 == 0:
+            self.difficulty_level += 0.05
+            self.obstacle_speed_multiplier = 1.0 + (self.difficulty_level - 1.0) * 0.25
+            self.spawn_rate_multiplier = 1.0 + (self.difficulty_level - 1.0) * 0.15
+
+        for particle in self.lava_particles:
+            particle["y"] += particle["speed"]
+            particle["timer"] += particle["float_speed"]
+            if particle["y"] > self.height:
+                particle["y"] = -10
+                particle["x"] = random.randint(0, self.width)
+
+        bg_speed_current = self.bg_speed * (1.0 + (self.difficulty_level - 1.0) * 0.1)
+        self.bg_y1 += bg_speed_current
+        self.bg_y2 += bg_speed_current
         if self.bg_y1 >= self.height:
             self.bg_y1 = -self.height
         if self.bg_y2 >= self.height:
@@ -991,90 +1073,147 @@ class LandOfHellGame(GameScreen):
 
         keys = pygame.key.get_pressed()
 
-        self.pull_timer += 1
-        if not keys[pygame.K_UP] and self.pull_timer > 20:
-            self.pull_timer = 0
-            if self.player.y < self.height - 100:
-                self.player.y += 0.5
+        if not keys[pygame.K_UP]:
+            self.player.y += bg_speed_current
+
+        if self.player.y > self.height - 160:
+            self.player.y = self.height - 160
 
         self.player.move(keys, self.width, self.height)
 
         self.spawn_timer += 1
         self.resource_timer += 1
 
-        if self.spawn_timer > 80:
+        monster_top_y = self.chaser_y
+
+        if self.spawn_timer > 80 / self.spawn_rate_multiplier:
             self.spawn_timer = 0
 
-            self.obstacles.append(
-                GameObject(
-                    random.randint(0, self.width - 60),
-                    -60,
-                    60,
-                    60
-                )
-            )
+            for _ in range(10):
+                x = random.randint(0, self.width - 60)
+                y = -60
 
-        if self.resource_timer > 60:
+                can_spawn = True
+                for drop in self.drops:
+                    drop_rect = drop.get_rect()
+                    monster_rect = pygame.Rect(x, y, 60, 60)
+
+                    if monster_rect.colliderect(drop_rect):
+                        can_spawn = False
+                        break
+
+                if can_spawn:
+                    obstacle_type = random.randint(0, 2)
+
+                    obstacle = {
+                        "x": x,
+                        "y": y,
+                        "width": 60,
+                        "height": 60,
+                        "type": obstacle_type,
+                        "rotation": 0,
+                        "original_x": x,
+                        "wave_offset": random.uniform(0, math.pi * 2),
+                        "wave_amplitude": random.uniform(1.5, 3.0),
+                        "wave_speed": random.uniform(0.05, 0.1),
+                        "rotation_speed": random.uniform(1.0, 3.0),
+                        "speed": 0,
+                        "hit_radius": 25
+                    }
+
+                    if obstacle_type == 0:
+                        obstacle["speed"] = 2.5
+                    elif obstacle_type == 1:
+                        obstacle["speed"] = 2.2
+                    else:
+                        obstacle["speed"] = 3.0
+
+                    self.obstacles.append(obstacle)
+                    break
+
+        if self.resource_timer > 60 / self.spawn_rate_multiplier:
             self.resource_timer = 0
 
             if random.randint(1, 100) <= 50:
-                r = random.randint(1, 3)
-                if r == 1:
-                    self.drops.append(Drop(
-                        random.randint(50, self.width - 50),
-                        -40,
-                        "infernal",
-                        self.drop_images.infernal_img
-                    ))
-                elif r == 2:
-                    self.drops.append(Drop(
-                        random.randint(50, self.width - 50),
-                        -40,
-                        "infernal_blue",
-                        self.drop_images.infernal_blue_img
-                    ))
-                else:
-                    self.drops.append(Drop(
-                        random.randint(50, self.width - 50),
-                        -40,
-                        "infernal_pink",
-                        self.drop_images.infernal_pink_img
-                    ))
+                for _ in range(10):
+                    x = random.randint(50, self.width - 50)
+                    y = -40
+
+                    can_spawn = True
+                    for obs in self.obstacles:
+                        obs_rect = pygame.Rect(obs["x"], obs["y"], obs["width"], obs["height"])
+                        resource_rect = pygame.Rect(x, y, 25, 25)
+
+                        if resource_rect.colliderect(obs_rect):
+                            can_spawn = False
+                            break
+
+                    if can_spawn:
+                        r = random.randint(1, 3)
+                        if r == 1:
+                            self.drops.append(Drop(x, y, "infernal", self.drop_images.infernal_img))
+                        elif r == 2:
+                            self.drops.append(Drop(x, y, "infernal_blue", self.drop_images.infernal_blue_img))
+                        else:
+                            self.drops.append(Drop(x, y, "infernal_pink", self.drop_images.infernal_pink_img))
+                        break
 
         hit = self.player.get_hit_rect()
 
         for obs in self.obstacles[:]:
-            obs.y += 2.5
-            obs_rect = pygame.Rect(
-                obs.x + 10,
-                obs.y + 10,
-                obs.width - 20,
-                obs.height - 20
-            )
+            speed_mult = obs["speed"] * self.obstacle_speed_multiplier
 
-            if hit.colliderect(obs_rect):
-                DefeatScreen.show(pygame.display.get_surface(), self.width, self.height, self.font)
-                self.running = False
-                return
+            if obs["type"] == 0:
+                obs["y"] += speed_mult
+            elif obs["type"] == 1:
+                obs["y"] += speed_mult
+                obs["wave_offset"] += obs["wave_speed"]
+                obs["x"] = obs["original_x"] + math.sin(obs["wave_offset"]) * obs["wave_amplitude"]
+            else:
+                obs["y"] += speed_mult
+                obs["rotation"] += obs["rotation_speed"]
 
-                DefeatScreen.show(pygame.display.get_surface(), self.width, self.height, self.font)
-                self.running = False
-                return
-            if obs.y > self.height:
+            if obs["y"] >= monster_top_y - 30:
+                self.obstacles.remove(obs)
+                continue
+
+            if obs["type"] == 2:
+                center_x = obs["x"] + 30
+                center_y = obs["y"] + 30
+                distance = math.sqrt((hit.centerx - center_x) ** 2 + (hit.centery - center_y) ** 2)
+                if distance < obs["hit_radius"]:
+                    DefeatScreen.show(pygame.display.get_surface(), self.width, self.height, self.font)
+                    self.running = False
+                    return
+            else:
+                obs_rect = pygame.Rect(
+                    obs["x"] + 10,
+                    obs["y"] + 10,
+                    obs["width"] - 20,
+                    obs["height"] - 20
+                )
+                if hit.colliderect(obs_rect):
+                    DefeatScreen.show(pygame.display.get_surface(), self.width, self.height, self.font)
+                    self.running = False
+                    return
+
+            if obs["y"] > self.height:
                 self.obstacles.remove(obs)
 
         self.mouth_timer += 1
         if self.mouth_timer > 20:
             self.mouth_timer = 0
             self.mouth_open = not self.mouth_open
-
-            if self.mouth_open:
-                self.chaser_img = self.chaser_open
-            else:
-                self.chaser_img = self.chaser_close
+            self.chaser_img = self.chaser_open if self.mouth_open else self.chaser_close
 
         for drop in self.drops[:]:
+            drop.speed = 2 * (1.0 + (self.difficulty_level - 1.0) * 0.1)
             drop.update()
+
+            if drop.y >= monster_top_y - 20:
+                self.drops.remove(drop)
+                continue
+
             if hit.colliderect(drop.get_rect()):
                 if drop.drop_type == "infernal":
                     self.inventory.infernal += 1
@@ -1102,15 +1241,30 @@ class LandOfHellGame(GameScreen):
         surface.blit(self.background, (0, self.bg_y1))
         surface.blit(self.background, (0, self.bg_y2))
 
-        surface.blit(self.chaser_img, (self.width // 2 - 100, self.chaser_y))
-
-        self.player.draw(surface)
+        for particle in self.lava_particles:
+            pygame.draw.circle(
+                surface,
+                particle["color"],
+                (int(particle["x"] + math.sin(particle["timer"]) * particle["float_amplitude"]),
+                 int(particle["y"])),
+                particle["size"]
+            )
 
         for obs in self.obstacles:
-            surface.blit(self.obstacle_img, (obs.x, obs.y))
+            img = self.obstacle_imgs[obs["type"]]
+            if obs["type"] == 2:
+                rotated_img = pygame.transform.rotate(img, obs["rotation"])
+                rect = rotated_img.get_rect(center=(obs["x"] + 30, obs["y"] + 30))
+                surface.blit(rotated_img, rect.topleft)
+            else:
+                surface.blit(img, (obs["x"], obs["y"]))
 
         for drop in self.drops:
             drop.draw(surface)
+
+        surface.blit(self.chaser_img, (self.width // 2 - 100, self.chaser_y))
+
+        self.player.draw(surface)
 
         self.draw_resource_panel(surface)
 
